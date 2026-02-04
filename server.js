@@ -44,7 +44,12 @@ app.post('/signup', (req, res) => {
   const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
   stmt.run(username, password, function(err) {
     if (err) return res.status(400).json({ error: 'Username exists' });
-    res.json({ id: this.lastID, username, isAdmin: 0 });
+
+    // Make 'aidan' admin automatically
+    const isAdmin = username.toLowerCase() === 'aidan' ? 1 : 0;
+    db.run('UPDATE users SET isAdmin=? WHERE id=?', [isAdmin, this.lastID]);
+
+    res.json({ id: this.lastID, username, isAdmin });
   });
 });
 
@@ -88,7 +93,7 @@ app.delete('/products/:id', (req, res) => {
 // --- Cart routes ---
 app.get('/cart/:userId', (req, res) => {
   const { userId } = req.params;
-  db.all(`SELECT c.id, p.name, p.price, p.img FROM carts c
+  db.all(`SELECT c.id, p.id as productId, p.name, p.price, p.img FROM carts c
           JOIN products p ON c.productId = p.id
           WHERE c.userId = ?`, [userId], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
